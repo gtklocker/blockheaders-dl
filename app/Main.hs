@@ -91,10 +91,24 @@ batchedHdrReqs start end =
 
 maxHeight = 10000
 
+data Chain
+  = BitcoinCore
+  | BitcoinCash
+  deriving (Eq, Show)
+
+data Network
+  = Mainnet
+  | Testnet
+  deriving (Eq, Show)
+
+serverFor BitcoinCore Mainnet = clientSettings 50001 "electrum-server.ninja"
+serverFor BitcoinCore Testnet = clientSettings 50001 "testnet.qtornado.com"
+serverFor BitcoinCash Mainnet = clientSettings 50001 "electroncash.dk"
+
 main :: IO ()
 main =
   runStderrLoggingT $
-  jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
+  jsonrpcTCPClient V2 True (serverFor BitcoinCore Mainnet) $ do
     logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
     let batches = batchedHdrReqs 0 maxHeight
     forM_ batches handleBatchReq
