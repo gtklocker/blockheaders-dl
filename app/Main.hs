@@ -135,14 +135,16 @@ main =
     runStderrLoggingT $ do
       let chain = optChain opts
       let network = optNetwork opts
+      let headerFile = show chain <> "-" <> show network <> ".bin"
       $(logDebug) $ "chain=" <> showT chain <> ", network=" <> showT network
+      $(logDebug) $ "saving to " <> fromString headerFile
       jsonrpcTCPClient V2 True (serverFor chain network) $ do
         logDebugN $ "querying with max=" <> showT maxHdrReqCount
         let batches = batchedHdrReqs 0 maxHeight
-        forM_ batches handleBatchReq
+        forM_ batches (handleBatchReq headerFile)
   where
-    handleBatchReq batch = do
+    handleBatchReq headerFile batch = do
       batchRes <- reqBatch batch
       let chunk = BS.concat $ map getHex batchRes
-      liftIO $ BS.appendFile "headers" chunk
-      logDebugN $ "response length: " <> showT (BS.length chunk)
+      liftIO $ BS.appendFile headerFile chunk
+      logDebugN $ "wrote " <> showT (BS.length chunk) <> " bytes"
