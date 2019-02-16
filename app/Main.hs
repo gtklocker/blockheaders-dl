@@ -80,18 +80,17 @@ req' = do
   $(logDebug) "sending get block headers request"
   return $ handleResponse tEM
 
-{-
 reqBatch :: MonadLoggerIO m => JSONRPCT m [Res]
 reqBatch = do
-  $(logDebug) "sending pings"
-  tEMs <- sendBatchRequest $ replicate 2 Ping
+  $(logDebug) "sending two reqs"
+  tEMs <- sendBatchRequest $ [EstimateFee 6, GetBlockHeaders 0 1 0]
   return $ map handleResponse tEMs
--}
+
 main :: IO ()
 main =
   runStderrLoggingT $
   jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
-    req' >>= $(logDebug) . T.pack . ("response: " ++) . show
+    reqBatch >>= $(logDebug) . T.pack . ("response: " ++) . show
     -- $(logDebug) "sending two time requests one second apart"
     -- replicateM_ 2 $ do
       -- liftIO (threadDelay 1000000)
