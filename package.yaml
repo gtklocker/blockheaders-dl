@@ -21,6 +21,15 @@ description:         Please see the README on GitHub at <https://github.com/gtkl
 
 dependencies:
 - base >= 4.7 && < 5
+- monad-logger
+- mtl
+- aeson
+- conduit-extra
+- text
+- time
+- unliftio
+- json-rpc == 1.0.0
+- scientific
 
 library:
   source-dirs: src
