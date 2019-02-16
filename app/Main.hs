@@ -29,11 +29,6 @@ data Req
                     Height
   deriving (Show, Eq)
 
-{-
-instance FromRequest Req where
-  parseParams "blockchain.block.header" = Just $ const $ return Header
-  parseParams _                         = Nothing
--}
 instance ToRequest Req where
   requestMethod (EstimateFee _)         = "blockchain.estimatefee"
   requestMethod (GetBlockHeaders _ _ _) = "blockchain.block.headers"
