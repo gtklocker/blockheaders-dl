@@ -93,7 +93,7 @@ getBlockHeaderReqs maxPerGroup start end =
         if start + maxPerGroup <= end
           then getBlockHeaderReqs maxPerGroup (start + maxPerGroup) end
           else []
-   in GetBlockHeaders start maxPerGroup 0 : rest
+   in GetBlockHeaders start (min (end - start + 1) maxPerGroup) 0 : rest
 
 maxRequestSize = 2016
 
