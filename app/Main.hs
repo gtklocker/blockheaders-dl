@@ -103,7 +103,7 @@ data Network
   | Testnet
   deriving (Bounded, Enum, Eq, Show)
 
-serverFor BitcoinCore Mainnet = clientSettings 50001 "electrum-server.ninja"
+serverFor BitcoinCore Mainnet = clientSettings 50001 "kirsche.emzy.de"
 serverFor BitcoinCore Testnet = clientSettings 50001 "testnet.qtornado.com"
 serverFor BitcoinCash Mainnet = clientSettings 50001 "electroncash.dk"
 
