@@ -8,6 +8,7 @@ import           Data.Aeson
 import           Data.Aeson.Types     hiding (Error)
 import           Data.Conduit.Network
 import           Data.List
+import           Data.List.Split
 import           Data.Scientific
 import qualified Data.Text            as T
 import           Data.Time.Clock
@@ -87,22 +88,30 @@ reqBatch reqs = do
   tEMs <- sendBatchRequest reqs
   return $ map handleResponse tEMs
 
-getBlockHeaderReqs :: Int -> Int -> Int -> [Req]
-getBlockHeaderReqs maxPerGroup start end =
-  let rest =
-        if start + maxPerGroup <= end
-          then getBlockHeaderReqs maxPerGroup (start + maxPerGroup) end
-          else []
-   in GetBlockHeaders start (min (end - start + 1) maxPerGroup) 0 : rest
+maxHdrReqCount = 2016
 
-maxRequestSize = 2016
+maxHdrReqsPerBatch = 2
+
+getBlockHeaderReqs :: Int -> Int -> [Req]
+getBlockHeaderReqs start end =
+  let rest =
+        if start + maxHdrReqCount <= end
+          then getBlockHeaderReqs (start + maxHdrReqCount) end
+          else []
+   in GetBlockHeaders start (min (end - start + 1) maxHdrReqCount) 0 : rest
+
+batchedHdrReqs :: Int -> Int -> [[Req]]
+batchedHdrReqs start end =
+  chunksOf maxHdrReqsPerBatch $ getBlockHeaderReqs start end
 
 main :: IO ()
 main =
   runStderrLoggingT $
   jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
-    logDebugN $ T.pack $ "querying with max=" ++ show maxRequestSize
-    reqBatch (getBlockHeaderReqs maxRequestSize 0 5000) >>= \xs -> do
-      let chunk = concatMap getHex xs
-      liftIO $ appendFile "headers" chunk
-      logDebugN $ T.pack $ "response length: " ++ show (length chunk)
+    logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
+    let batches = batchedHdrReqs 0 10000
+    forM_ batches $ \batch -> do
+      reqBatch batch >>= \xs -> do
+        let chunk = concatMap getHex xs
+        liftIO $ appendFile "headers" chunk
+        logDebugN $ T.pack $ "response length: " ++ show (length chunk)

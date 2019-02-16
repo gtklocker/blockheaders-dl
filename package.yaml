@@ -30,6 +30,7 @@ dependencies:
 - unliftio
 - json-rpc == 1.0.0
 - scientific
+- split
 
 library:
   source-dirs: src
