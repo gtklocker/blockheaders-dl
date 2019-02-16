@@ -95,9 +95,14 @@ getBlockHeaderReqs maxPerGroup start end =
           else []
    in GetBlockHeaders start maxPerGroup 0 : rest
 
+maxRequestSize = 2016
+
 main :: IO ()
 main =
   runStderrLoggingT $
-  jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $
-  reqBatch (getBlockHeaderReqs 5 0 20) >>= \xs ->
-    $(logDebug) $ T.pack $ "response: " ++ intercalate "\n" (map getHex xs)
+  jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
+    logDebugN $ T.pack $ "querying with max=" ++ show maxRequestSize
+    reqBatch (getBlockHeaderReqs maxRequestSize 0 5000) >>= \xs -> do
+      let chunk = concatMap getHex xs
+      liftIO $ appendFile "headers" chunk
+      logDebugN $ T.pack $ "response length: " ++ show (length chunk)
