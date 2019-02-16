@@ -32,6 +32,8 @@ dependencies:
 - scientific
 - split
 - options
+- hexstring
+- bytestring
 
 library:
   source-dirs: src

@@ -7,7 +7,10 @@ import           Control.Monad.Logger
 import           Control.Monad.Trans
 import           Data.Aeson           hiding (Options)
 import           Data.Aeson.Types     hiding (Error, Options)
+import           Data.ByteString      (ByteString (..))
+import qualified Data.ByteString      as BS
 import           Data.Conduit.Network
+import           Data.HexString
 import           Data.List
 import           Data.List.Split
 import           Data.Scientific
@@ -45,7 +48,7 @@ instance ToJSON Req where
 
 data Res
   = Fee { getFee :: Fee }
-  | BlockHeaders { getHex   :: String
+  | BlockHeaders { getHex   :: ByteString
                  , getCount :: Count
                  , getMax   :: Int }
   deriving (Show, Eq)
@@ -56,7 +59,8 @@ instance FromResponse Res where
   parseResult "blockchain.block.headers" =
     return $
     withObject "result" $ \res ->
-      BlockHeaders <$> (res .: "hex") <*> (res .: "count") <*> (res .: "max")
+      BlockHeaders <$> (toBytes <$> res .: "hex") <*> (res .: "count") <*>
+      (res .: "max")
   parseResult _ = Nothing
 
 instance ToJSON Res where
@@ -137,6 +141,6 @@ main =
   where
     handleBatchReq batch = do
       batchRes <- reqBatch batch
-      let chunk = concatMap getHex batchRes
-      liftIO $ appendFile "headers" chunk
-      logDebugN $ T.pack $ "response length: " ++ show (length chunk)
+      let chunk = BS.concat $ map getHex batchRes
+      liftIO $ BS.appendFile "headers" chunk
+      logDebugN $ T.pack $ "response length: " ++ show (BS.length chunk)
