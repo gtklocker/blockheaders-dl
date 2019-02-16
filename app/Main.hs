@@ -67,18 +67,6 @@ handleResponse t =
     Just (Left e)  -> error $ fromError e
     Just (Right r) -> r
 
-req :: MonadLoggerIO m => JSONRPCT m Res
-req = do
-  tEM <- sendRequest $ EstimateFee 6
-  $(logDebug) "sending estimate fee request"
-  return $ handleResponse tEM
-
-req' :: MonadLoggerIO m => JSONRPCT m Res
-req' = do
-  tEM <- sendRequest $ GetBlockHeaders 0 1 0
-  $(logDebug) "sending get block headers request"
-  return $ handleResponse tEM
-
 reqBatch :: MonadLoggerIO m => [Req] -> JSONRPCT m [Res]
 reqBatch reqs = do
   $(logDebug) "sending reqs"
