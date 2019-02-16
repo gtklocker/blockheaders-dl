@@ -31,6 +31,7 @@ dependencies:
 - json-rpc == 1.0.0
 - scientific
 - split
+- options
 
 library:
   source-dirs: src

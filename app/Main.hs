@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
+import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Logger
 import           Control.Monad.Trans
-import           Data.Aeson
-import           Data.Aeson.Types     hiding (Error)
+import           Data.Aeson           hiding (Options)
+import           Data.Aeson.Types     hiding (Error, Options)
 import           Data.Conduit.Network
 import           Data.List
 import           Data.List.Split
@@ -14,6 +15,7 @@ import qualified Data.Text            as T
 import           Data.Time.Clock
 import           Data.Time.Format
 import           Network.JSONRPC
+import           Options
 import           UnliftIO.Concurrent
 
 type TxSize = Int
@@ -94,24 +96,44 @@ maxHeight = 10000
 data Chain
   = BitcoinCore
   | BitcoinCash
-  deriving (Eq, Show)
+  deriving (Bounded, Enum, Eq, Show)
 
 data Network
   = Mainnet
   | Testnet
-  deriving (Eq, Show)
+  deriving (Bounded, Enum, Eq, Show)
 
 serverFor BitcoinCore Mainnet = clientSettings 50001 "electrum-server.ninja"
 serverFor BitcoinCore Testnet = clientSettings 50001 "testnet.qtornado.com"
 serverFor BitcoinCash Mainnet = clientSettings 50001 "electroncash.dk"
 
+data MainOptions = MainOptions
+  { optChain   :: Chain
+  , optNetwork :: Network
+  }
+
+instance Options MainOptions where
+  defineOptions =
+    pure MainOptions <*>
+    defineOption
+      (optionType_enum "chain")
+      (\o -> o {optionLongFlags = ["chain"], optionDefault = BitcoinCore}) <*>
+    defineOption
+      (optionType_enum "net")
+      (\o -> o {optionLongFlags = ["net"], optionDefault = Mainnet})
+
 main :: IO ()
 main =
-  runStderrLoggingT $
-  jsonrpcTCPClient V2 True (serverFor BitcoinCore Mainnet) $ do
-    logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
-    let batches = batchedHdrReqs 0 maxHeight
-    forM_ batches handleBatchReq
+  runCommand $ \opts args ->
+    runStderrLoggingT $ do
+      let chain = optChain opts
+      let network = optNetwork opts
+      $(logDebug) $
+        T.pack $ "chain=" ++ show chain ++ ", network=" ++ show network
+      jsonrpcTCPClient V2 True (serverFor chain network) $ do
+        logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
+        let batches = batchedHdrReqs 0 maxHeight
+        forM_ batches handleBatchReq
   where
     handleBatchReq batch = do
       batchRes <- reqBatch batch
