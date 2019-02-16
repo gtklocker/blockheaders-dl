@@ -7,6 +7,7 @@ import           Control.Monad.Trans
 import           Data.Aeson
 import           Data.Aeson.Types     hiding (Error)
 import           Data.Conduit.Network
+import           Data.List
 import           Data.Scientific
 import qualified Data.Text            as T
 import           Data.Time.Clock
@@ -80,19 +81,23 @@ req' = do
   $(logDebug) "sending get block headers request"
   return $ handleResponse tEM
 
-reqBatch :: MonadLoggerIO m => JSONRPCT m [Res]
-reqBatch = do
-  $(logDebug) "sending two reqs"
-  tEMs <- sendBatchRequest $ [EstimateFee 6, GetBlockHeaders 0 1 0]
+reqBatch :: MonadLoggerIO m => [Req] -> JSONRPCT m [Res]
+reqBatch reqs = do
+  $(logDebug) "sending reqs"
+  tEMs <- sendBatchRequest reqs
   return $ map handleResponse tEMs
+
+getBlockHeaderReqs :: Int -> Int -> Int -> [Req]
+getBlockHeaderReqs maxPerGroup start end =
+  let rest =
+        if start + maxPerGroup <= end
+          then getBlockHeaderReqs maxPerGroup (start + maxPerGroup) end
+          else []
+   in GetBlockHeaders start maxPerGroup 0 : rest
 
 main :: IO ()
 main =
   runStderrLoggingT $
-  jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
-    reqBatch >>= $(logDebug) . T.pack . ("response: " ++) . show
-    -- $(logDebug) "sending two time requests one second apart"
-    -- replicateM_ 2 $ do
-      -- liftIO (threadDelay 1000000)
-    -- $(logDebug) "sending two pings in a batch"
-    -- reqBatch >>= $(logDebug) . T.pack . ("response: " ++) . show
+  jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $
+  reqBatch (getBlockHeaderReqs 5 0 20) >>= \xs ->
+    $(logDebug) $ T.pack $ "response: " ++ intercalate "\n" (map getHex xs)
