@@ -101,12 +101,14 @@ batchedHdrReqs :: Int -> Int -> [[Req]]
 batchedHdrReqs start end =
   chunksOf maxHdrReqsPerBatch $ getBlockHeaderReqs start end
 
+maxHeight = 10000
+
 main :: IO ()
 main =
   runStderrLoggingT $
   jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
     logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
-    let batches = batchedHdrReqs 0 10000
+    let batches = batchedHdrReqs 0 maxHeight
     forM_ batches handleBatchReq
   where
     handleBatchReq batch = do
