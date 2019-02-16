@@ -14,6 +14,7 @@ import           Data.HexString
 import           Data.List
 import           Data.List.Split
 import           Data.Scientific
+import           Data.String          (fromString)
 import qualified Data.Text            as T
 import           Data.Time.Clock
 import           Data.Time.Format
@@ -126,16 +127,17 @@ instance Options MainOptions where
       (optionType_enum "net")
       (\o -> o {optionLongFlags = ["net"], optionDefault = Mainnet})
 
+showT x = fromString $ show x
+
 main :: IO ()
 main =
   runCommand $ \opts args ->
     runStderrLoggingT $ do
       let chain = optChain opts
       let network = optNetwork opts
-      $(logDebug) $
-        T.pack $ "chain=" ++ show chain ++ ", network=" ++ show network
+      $(logDebug) $ "chain=" <> showT chain <> ", network=" <> showT network
       jsonrpcTCPClient V2 True (serverFor chain network) $ do
-        logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
+        logDebugN $ "querying with max=" <> showT maxHdrReqCount
         let batches = batchedHdrReqs 0 maxHeight
         forM_ batches handleBatchReq
   where
@@ -143,4 +145,4 @@ main =
       batchRes <- reqBatch batch
       let chunk = BS.concat $ map getHex batchRes
       liftIO $ BS.appendFile "headers" chunk
-      logDebugN $ T.pack $ "response length: " ++ show (BS.length chunk)
+      logDebugN $ "response length: " <> showT (BS.length chunk)
