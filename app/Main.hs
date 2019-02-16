@@ -18,8 +18,15 @@ type TxSize = Int
 
 type Fee = Scientific
 
-data Req =
-  EstimateFee TxSize
+type Height = Int
+
+type Count = Int
+
+data Req
+  = EstimateFee TxSize
+  | GetBlockHeaders Height
+                    Count
+                    Height
   deriving (Show, Eq)
 
 {-
@@ -28,19 +35,32 @@ instance FromRequest Req where
   parseParams _                         = Nothing
 -}
 instance ToRequest Req where
-  requestMethod (EstimateFee _) = "blockchain.estimatefee"
+  requestMethod (EstimateFee _)         = "blockchain.estimatefee"
+  requestMethod (GetBlockHeaders _ _ _) = "blockchain.block.headers"
   requestIsNotif = const False
 
 instance ToJSON Req where
   toJSON (EstimateFee txSize) = toJSON [txSize]
+  toJSON (GetBlockHeaders startHeight count cpHeight) =
+    toJSON [startHeight, count] --, cpHeight]
 
-data Res = Fee
-  { getFee :: Fee
-  } deriving (Show, Eq)
+data Res
+  = Fee { getFee :: Fee }
+  | BlockHeaders { getHex   :: String
+                 , getCount :: Count
+                 , getMax   :: Int }
+  deriving (Show, Eq)
 
 instance FromResponse Res where
   parseResult "blockchain.estimatefee" =
     return $ withScientific "fee" $ \fee -> return $ Fee fee
+  parseResult "blockchain.block.headers" =
+    return $
+    withObject "result" $ \res ->
+      let hex = res .: "hex"
+          count = res .: "count"
+          max = res .: "max"
+       in BlockHeaders <$> hex <*> count <*> max
   parseResult _ = Nothing
 
 instance ToJSON Res where
@@ -59,6 +79,12 @@ req = do
   $(logDebug) "sending estimate fee request"
   return $ handleResponse tEM
 
+req' :: MonadLoggerIO m => JSONRPCT m Res
+req' = do
+  tEM <- sendRequest $ GetBlockHeaders 0 1 0
+  $(logDebug) "sending get block headers request"
+  return $ handleResponse tEM
+
 {-
 reqBatch :: MonadLoggerIO m => JSONRPCT m [Res]
 reqBatch = do
@@ -70,7 +96,7 @@ main :: IO ()
 main =
   runStderrLoggingT $
   jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
-    req >>= $(logDebug) . T.pack . ("response: " ++) . show
+    req' >>= $(logDebug) . T.pack . ("response: " ++) . show
     -- $(logDebug) "sending two time requests one second apart"
     -- replicateM_ 2 $ do
       -- liftIO (threadDelay 1000000)
