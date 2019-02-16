@@ -107,8 +107,10 @@ main =
   jsonrpcTCPClient V2 True (clientSettings 50001 "electrum-server.ninja") $ do
     logDebugN $ T.pack $ "querying with max=" ++ show maxHdrReqCount
     let batches = batchedHdrReqs 0 10000
-    forM_ batches $ \batch -> do
-      reqBatch batch >>= \xs -> do
-        let chunk = concatMap getHex xs
-        liftIO $ appendFile "headers" chunk
-        logDebugN $ T.pack $ "response length: " ++ show (length chunk)
+    forM_ batches handleBatchReq
+  where
+    handleBatchReq batch = do
+      batchRes <- reqBatch batch
+      let chunk = concatMap getHex batchRes
+      liftIO $ appendFile "headers" chunk
+      logDebugN $ T.pack $ "response length: " ++ show (length chunk)
