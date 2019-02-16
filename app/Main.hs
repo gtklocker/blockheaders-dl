@@ -32,8 +32,8 @@ data Req
   deriving (Show, Eq)
 
 instance ToRequest Req where
-  requestMethod (EstimateFee _)         = "blockchain.estimatefee"
-  requestMethod (GetBlockHeaders _ _ _) = "blockchain.block.headers"
+  requestMethod EstimateFee {}     = "blockchain.estimatefee"
+  requestMethod GetBlockHeaders {} = "blockchain.block.headers"
   requestIsNotif = const False
 
 instance ToJSON Req where
