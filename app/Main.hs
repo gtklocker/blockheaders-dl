@@ -54,10 +54,7 @@ instance FromResponse Res where
   parseResult "blockchain.block.headers" =
     return $
     withObject "result" $ \res ->
-      let hex = res .: "hex"
-          count = res .: "count"
-          max = res .: "max"
-       in BlockHeaders <$> hex <*> count <*> max
+      BlockHeaders <$> (res .: "hex") <*> (res .: "count") <*> (res .: "max")
   parseResult _ = Nothing
 
 instance ToJSON Res where
