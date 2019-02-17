@@ -96,8 +96,6 @@ batchedHdrReqs :: Int -> Int -> [[Req]]
 batchedHdrReqs start end =
   chunksOf maxHdrReqsPerBatch $ getBlockHeaderReqs start end
 
-maxHeight = 10000
-
 data Chain
   = BitcoinCore
   | BitcoinCash
@@ -115,6 +113,7 @@ serverFor BitcoinCash Mainnet = clientSettings 50001 "electroncash.dk"
 data MainOptions = MainOptions
   { optChain   :: Chain
   , optNetwork :: Network
+  , optLength  :: Int
   }
 
 instance Options MainOptions where
@@ -125,7 +124,8 @@ instance Options MainOptions where
       (\o -> o {optionLongFlags = ["chain"], optionDefault = BitcoinCore}) <*>
     defineOption
       (optionType_enum "net")
-      (\o -> o {optionLongFlags = ["net"], optionDefault = Mainnet})
+      (\o -> o {optionLongFlags = ["net"], optionDefault = Mainnet}) <*>
+    simpleOption "len" 1 "Length of chain to download."
 
 showT x = fromString $ show x
 
@@ -135,6 +135,7 @@ main =
     runStderrLoggingT $ do
       let chain = optChain opts
       let network = optNetwork opts
+      let maxHeight = optLength opts
       let headerFile = show chain <> "-" <> show network <> ".bin"
       $(logDebug) $ "chain=" <> showT chain <> ", network=" <> showT network
       $(logDebug) $ "saving to " <> fromString headerFile
