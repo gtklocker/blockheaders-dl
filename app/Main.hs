@@ -99,6 +99,7 @@ batchedHdrReqs start end =
 data Chain
   = BitcoinCore
   | BitcoinCash
+  | Litecoin
   deriving (Bounded, Enum, Eq, Show)
 
 data Network
@@ -109,6 +110,7 @@ data Network
 serverFor BitcoinCore Mainnet = clientSettings 50001 "kirsche.emzy.de"
 serverFor BitcoinCore Testnet = clientSettings 50001 "testnet.qtornado.com"
 serverFor BitcoinCash Mainnet = clientSettings 50001 "electroncash.dk"
+serverFor Litecoin Mainnet    = clientSettings 50001 "electrum-ltc.wilv.in"
 
 data MainOptions = MainOptions
   { optChain   :: Chain
